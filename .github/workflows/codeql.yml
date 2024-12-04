@@ -33,15 +33,16 @@ jobs:
             libssl-dev \
             libsqlite3-dev \
             libglib2.0-dev \
-            libjansson-dev
+            libjansson-dev \
+            uuid-dev \
+            libarchive-dev \
+            libfuse-dev
 
-      # Generate compile_commands.json for better analysis
-      - name: Generate Build Files
+      # Configure and generate build files
+      - name: Configure Project
         run: |
-          mkdir build
-          cd build
-          cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
-          cp compile_commands.json ../
+          ./autogen.sh || true
+          ./configure || true
 
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2024.2
@@ -49,20 +50,25 @@ jobs:
           args: |
             --linter=jetbrains/qodana-clang:2024.2-eap
             --print-problems
-            --compile-commands=compile_commands.json
           upload-result: true
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_151724212 }}
 
-      - name: Save Qodana Results
+      - name: Save Analysis Results
         uses: actions/upload-artifact@v3
         with:
           name: qodana-results
           path: ${{ runner.temp }}/qodana/results
 
-      # This will show results in GitHub Security tab
       - name: Upload SARIF to GitHub
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
           category: qodana-clang
+
+      - name: Deploy Report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ runner.temp }}/qodana/results/report
+          destination_dir: ./
