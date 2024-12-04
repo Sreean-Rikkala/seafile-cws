@@ -48,23 +48,18 @@ jobs:
           libfuse-dev \
           python3-dev \
           uuid-dev \
-          libarchive-dev \
-          cmake \
-          make \
-          gcc \
-          g++
+          libarchive-dev
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        config-file: .github/codeql/codeql-config.yml
 
     - name: Build C++
       if: ${{ matrix.language == 'cpp' }}
       run: |
-        mkdir build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Debug ..
+        ./autogen.sh
+        ./configure --prefix=/usr CFLAGS="-g -O0" CXXFLAGS="-g -O0"
         make VERBOSE=1
       continue-on-error: true
 
