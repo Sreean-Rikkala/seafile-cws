@@ -41,11 +41,10 @@ jobs:
             valac \
             intltool
 
-      # Configure and generate build files
-      - name: Configure Project
+      # Clear Qodana Cache
+      - name: Clear Qodana Cache
         run: |
-          ./autogen.sh || true
-          ./configure || true
+          rm -rf /home/runner/work/_temp/qodana/caches
 
       # Run Qodana scan
       - name: 'Qodana Scan'
@@ -56,7 +55,7 @@ jobs:
             --print-problems
           upload-result: true
         env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_151724212 }}
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
 
       # Save analysis results
       - name: Save Analysis Results
