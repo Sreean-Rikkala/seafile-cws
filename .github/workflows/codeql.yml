@@ -26,7 +26,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0  # Fetch all history for proper analysis
+        fetch-depth: 0
 
     - name: Install Build Dependencies
       if: ${{ matrix.language == 'cpp' }}
@@ -55,25 +55,20 @@ jobs:
           g++
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        queries: security-extended,security-and-quality
+        config-file: .github/codeql/codeql-config.yml
 
-    - name: Manual Build
+    - name: Build C++
       if: ${{ matrix.language == 'cpp' }}
-      env:
-        CFLAGS: "-D_FORTIFY_SOURCE=2"
-        CXXFLAGS: "-D_FORTIFY_SOURCE=2"
       run: |
-        # Build seaf-daemon
-        cd $GITHUB_WORKSPACE
-        ./autogen.sh || true
-        ./configure --prefix=/usr CFLAGS="-g -O0" CXXFLAGS="-g -O0" || true
-        make VERBOSE=1 || true
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Debug ..
+        make VERBOSE=1
       continue-on-error: true
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
