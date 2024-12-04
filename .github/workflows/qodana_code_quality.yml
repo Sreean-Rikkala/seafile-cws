@@ -1,11 +1,10 @@
-name: Qodana
+name: "Security Code Analysis"
 on:
-  workflow_dispatch:
-  pull_request:
   push:
-    branches: # Specify your branches here
-      - main # The 'main' branch
-      - 'releases/*' # The release branches
+    branches: 
+      - master
+      - main
+  workflow_dispatch:  # Allows manual trigger
 
 jobs:
   qodana:
@@ -14,15 +13,52 @@ jobs:
       contents: write
       pull-requests: write
       checks: write
+      security-events: write  # Required for uploading security findings
+
     steps:
+      # Checkout code
       - uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.pull_request.head.sha }}  # to check out the actual pull request commit, not the merge commit
-          fetch-depth: 0  # a full history is required for pull request analysis
-      - name: 'Qodana Scan'
+          fetch-depth: 0
+
+      # Run Qodana Security Scan
+      - name: 'Qodana Security Scan'
         uses: JetBrains/qodana-action@v2024.2
         with:
+          args: |
+            --security-inspection-enabled=true
+            --vulnerability-analysis-enabled=true
+            --enable-cwe-mapping=true  # Map findings to CWE categories
+            --baseline=false
+          profile-name: 'security'  # Focus on security inspection
+          scan-type: 'repository'
+          upload-result: true
           pr-mode: false
+          post-annotation: true
         env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_999350771 }}
-          QODANA_ENDPOINT: 'https://qodana.cloud'
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+
+      # Copy results to ensure they are saved in the right place
+      - name: Save Results
+        run: |
+          mkdir -p ${{ runner.temp }}/qodana/results
+          cp -r ${{ runner.temp }}/qodana/results/* ${{ runner.temp }}/qodana/results/report
+
+      # Upload SARIF report to GitHub Security tab
+      - name: Upload SARIF Report
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
+          category: qodana
+
+      # Deploy Qodana HTML Report to GitHub Pages
+      - name: Deploy Qodana Report
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ runner.temp }}/qodana/results/report
+          destination_dir: ./report
+
+      # Output key findings to logs (optional for quick insights)
+      - name: Display Findings in Logs
+        run: cat ${{ runner.temp }}/qodana/results/qodana.sarif.json
