@@ -1,0 +1,17 @@
+name: "Custom CodeQL Config"
+
+disable-default-queries: true
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+
+paths:
+  - server
+  - lib
+  - daemon
+  - common
+paths-ignore:
+  - '**/tests/**'
+  - '**/third_party/**'
+  
