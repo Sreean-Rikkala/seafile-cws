@@ -1,80 +1,18 @@
-name: "Seafile Security Analysis"
+name: "Test Qodana"
 on:
-  push:
-    branches: 
-      - master
-      - main
   workflow_dispatch:
 
 jobs:
   qodana:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      checks: write
-      security-events: write
-
     steps:
-      # Checkout the repository
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
-      # Install dependencies required for Seafile
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            autoconf \
-            automake \
-            libtool \
-            libevent-dev \
-            libcurl4-openssl-dev \
-            libssl-dev \
-            libsqlite3-dev \
-            libglib2.0-dev \
-            libjansson-dev \
-            uuid-dev \
-            libarchive-dev \
-            libfuse-dev \
-            valac \
-            intltool
-
-      # Clear Qodana Cache
-      - name: Clear Qodana Cache
-        run: |
-          rm -rf /home/runner/work/_temp/qodana/caches
-
-      # Run Qodana scan
-      - name: 'Qodana Scan'
+      - name: Run Qodana
         uses: JetBrains/qodana-action@v2024.2
         with:
           args: |
-            --linter=jetbrains/qodana-clang:2024.2
+            --linter=jetbrains/qodana-clang:2024.2.5
             --print-problems
-          upload-result: true
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
-
-      # Save analysis results
-      - name: Save Analysis Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: qodana-results
-          path: ${{ runner.temp }}/qodana/results
-
-      # Upload SARIF report to GitHub for security insights
-      - name: Upload SARIF to GitHub
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: ${{ runner.temp }}/qodana/results/results.sarif.json
-          category: qodana-clang
-
-      # Deploy report to GitHub Pages
-      - name: Deploy Report to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ${{ runner.temp }}/qodana/results/report
-          destination_dir: ./
