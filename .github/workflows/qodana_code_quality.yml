@@ -13,19 +13,22 @@ jobs:
       contents: write
       pull-requests: write
       checks: write
-      security-events: write  # Added for security findings
+      security-events: write  # Required for uploading security findings
 
     steps:
+      # Checkout code
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: 'Qodana Scan'
+      # Run Qodana Security Scan
+      - name: 'Qodana Security Scan'
         uses: JetBrains/qodana-action@v2024.2
         with:
           args: |
             --security-inspection-enabled=true
             --vulnerability-analysis-enabled=true
+            --enable-cwe-mapping=true  # Map findings to CWE categories
             --baseline=false
           profile-name: 'security'  # Focus on security inspection
           scan-type: 'repository'
@@ -33,22 +36,29 @@ jobs:
           pr-mode: false
           post-annotation: true
         env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_151724212 }}
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
 
-      - name: Generate SARIF report
+      # Copy results to ensure they are saved in the right place
+      - name: Save Results
         run: |
           mkdir -p ${{ runner.temp }}/qodana/results
-          cp ${{ runner.temp }}/qodana/results/qodana.sarif.json ${{ runner.temp }}/qodana/results/report
+          cp -r ${{ runner.temp }}/qodana/results/* ${{ runner.temp }}/qodana/results/report
 
-      - name: Upload SARIF report
+      # Upload SARIF report to GitHub Security tab
+      - name: Upload SARIF Report
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: ${{ runner.temp }}/qodana/results/qodana.sarif.json
           category: qodana
 
-      - name: Deploy Report to GitHub Pages
+      # Deploy Qodana HTML Report to GitHub Pages
+      - name: Deploy Qodana Report
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ${{ runner.temp }}/qodana/results/report
           destination_dir: ./report
+
+      # Output key findings to logs (optional for quick insights)
+      - name: Display Findings in Logs
+        run: cat ${{ runner.temp }}/qodana/results/qodana.sarif.json
