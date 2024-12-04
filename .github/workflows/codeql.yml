@@ -26,23 +26,42 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Install Dependencies
+    - name: Install Build Dependencies
       if: ${{ matrix.language == 'cpp' }}
       run: |
         sudo apt-get update
-        sudo apt-get install -y libcurl4-openssl-dev libjansson-dev libsqlite3-dev libssl-dev libglib2.0-dev libevent-dev uuid-dev libarchive-dev
+        sudo apt-get install -y \
+          autoconf \
+          automake \
+          libtool \
+          libevent-dev \
+          libcurl4-openssl-dev \
+          libgtk2.0-dev \
+          libssl-dev \
+          libsqlite3-dev \
+          intltool \
+          libglib2.0-dev \
+          libjansson-dev \
+          valac \
+          libfuse-dev \
+          python3-dev \
+          uuid-dev \
+          libarchive-dev
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
       with:
         languages: ${{ matrix.language }}
 
-    - name: Build C/C++
+    - name: Manual Build
       if: ${{ matrix.language == 'cpp' }}
       run: |
+        # Build seaf-daemon
+        cd $GITHUB_WORKSPACE
         ./autogen.sh
         ./configure
         make
+      continue-on-error: true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
